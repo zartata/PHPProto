@@ -114,7 +114,7 @@ It is possible to access the structure using the parent() method or function:
     $myProto->echofoo();
     ?>
 
-You can nest as many as you want;
+You can nest as many as you want:
 
     <?php
     $myProto = proto(function(){
@@ -205,7 +205,7 @@ procedural interface):
     });
     ?>
 
-The deeper variables will shadow the inherited ones.
+The deeper variables will shadow the inherited ones:
 
     <?php
     $protoA = proto(function(){
@@ -218,7 +218,7 @@ The deeper variables will shadow the inherited ones.
     echo $protoB->foo; // prints baz
     ?>
 
-Inheritance, by default, will make a deep copy of the inherited prototype.
+Inheritance, by default, will make a deep copy of the inherited prototype:
 
     <?php
     $protoA = proto(function(){
@@ -230,20 +230,6 @@ Inheritance, by default, will make a deep copy of the inherited prototype.
     });
     echo $protoB->foo; // prints baz
     echo $protoA->foo; // prints bar
-    ?>
-
-This can be disabled, by the use of the $shared argument in the __proto__()
-method (OO interface only):
-
-    <?php
-    $protoA = proto(function(){
-        this()->foo = 'bar';
-    });
-    $protoB = proto(function() use($protoA){
-        proto($protoA, true); // do not copy $protoA
-        this()->foo = 'baz';
-    });
-    echo $protoA->foo; // prints baz
     ?>
 
 Multiple inheritance is also possible:
@@ -262,6 +248,9 @@ Multiple inheritance is also possible:
         echo this()->hello; // prints world
     });
     ?>
+
+The last loaded prototype has priority over the first in regards to
+variable access.
 
 
 
