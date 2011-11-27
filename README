@@ -48,9 +48,8 @@ However, due to limitations in the PHP core, this library relies on a
 global state (static variable) to work properly. In the case of multi-
 threading, which PHP does not support, this wouldn't work as expected.
 However, multi-threaded support for PHP is not available, and it probably
-not going to be without rewriting the whole thing, so I'd say it is safe
-to use this library.
- 
+not going to be without rewriting the whole thing.
+
 
 
 3. BASIC USAGE
@@ -128,8 +127,8 @@ You can nest as many as you want;
     $myProto->second->third();
     ?>
 
-Just keep in my that calling third() will also call the base $myProto()
-function and the two() function as well.
+Keep in mind that calling third() will also call the base $myProto()
+function and the two() function as well (see Autoloading).
 
 
                           
@@ -177,6 +176,7 @@ times:
     <?php
     $myProto = proto(function($foo){
         this()->foo = $foo;
+        return this();
     });
     
     $proto1 = clone $myProto('bar');
