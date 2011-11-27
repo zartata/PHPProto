@@ -2,7 +2,7 @@
 /**
  * php-proto : Prototype programming interface.
  *
- * @author          Francis Lacroix <f@overridelogic.com>
+ * @author          Francis Lacroix <f@quotient.ca>
  * @package         php-proto
  * @version         1.0
  * @copyright       All rights reserved (c) Override Logic Technologies 2011-
@@ -14,6 +14,9 @@
  * 
  * This class provides an interface for prototype-based programming. Refer to the README
  * file to know how to use it.
+ * 
+ * @todo Error checking
+ * @todo Automatic scope resolution
  * 
  * @category        Core
  * @version         1.0
