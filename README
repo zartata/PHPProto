@@ -8,273 +8,328 @@
 *                                                                   *
 *********************************************************************
 
-                             CHANGE LOG
+0. LICENSE
+-----------
+This work is provided as-is. The author is not responsible for the
+usage of this library or the damages it may cause in anyway.
 
- - 1.0 : Initial draft.
+This work is licensed under the GNU Lesser General Public License V3,
+bundled with this software.
+
+You are free to modify, use or distribute this work as you wish. Please,
+just credit the original authors and keep the license in the package!
+
+Enjoy!
+
  
-                               HOW TO
-                               
+
+1. CHANGELOG
+-------------
+ - 1.0 : Initial draft.
+
+
+ 
+2. GETTING STARTED
+-------------------
 This library provides a way to do prototype-based programming in PHP.
-There are two facilities for creating a base prototype object, the OOP
-approach or the procedural approach:
+The library may be not perfect right now, but I'm still working on it.
 
-<?php
-// OOP
-$myPrototype = new PHPPrototype(function(){
-     // function body
-}); 
+More specifically, it provides the following:
+ - Use of PHP closures as "objects"
+ - Dynamic modification of these objects
+ - Prototype cloning
+ - Multiple inherited prototypes
+ - Scope resolution (this, parent, etc.)
+ - Type checking
+ - No use of shady constructs like eval()
+ 
+However, due to limitations in the PHP core, this library relies on a
+global state (static variable) to work properly. In the case of multi-
+threading, which PHP does not support, this wouldn't work as expected.
+However, multi-threaded support for PHP is not available, and it probably
+not going to be without rewriting the whole thing, so I'd say it is safe
+to use this library.
+ 
 
-// Procedural
-$myPrototype = proto(function(){
-     // function body
-});
-?>
 
-                               THIS()
+3. BASIC USAGE
+---------------
+There are two interfaces that can be used for this library. The
+object-oriented interface and the procedural interface.
+
+The former prevents function name collisions while the second alleviates
+the code, since the constructs and function names are shorter.
+
+To instantiate a prototype object, using the object-oriented interface:
+
+    <?php
+    include 'proto.class.php';
+    
+    $myProto = new PHPProto(function(){
+        echo 'Hello World!';
+    });
+    $myProto();
+    ?>
+
+The same can be done with the proto() function:
+
+    <?php
+    include 'proto.inc.php';
+    
+    $myProto = proto(function(){
+        echo 'Hello World!';
+    });                    
+    $myProto();
+    ?>
+
+
+
+4. SCOPE RESOLUTION
+--------------------
+Properties can be assigned to the current protype with the use of the
+PHPProto::this() method (in the OO interface) or the this() function
+(in the procedural interface):
+
+    <?php
+    $myProto = proto(function(){
+        PHPProto::this()->foo = 'bar';
+        this()->foo = 'bar'; // same as above
+    });
+    ?>
+
+Of course, it is possible to nest closures. It is not necessary to use
+the proto() construct there, since closures will be automatically
+converted. 
+
+It is possible to access the structure using the parent() method or function:
+
+    <?php
+    $myProto = proto(function(){
+        this()->foo = 'bar';
+        this()->echofoo = function(){
+            echo PHPProto::this()->parent()->foo;
+            echo parent()->foo; // same as above
+        };
+    });
+    $myProto->echofoo();
+    ?>
+
+You can nest as many as you want;
+
+    <?php
+    $myProto = proto(function(){
+        this()->second = function(){
+            this()->third = function(){
+                echo 'Hello World!';
+            };
+        };
+    });
+    $myProto->second->third();
+    ?>
+
+Just keep in my that calling third() will also call the base $myProto()
+function and the two() function as well.
+
+
                           
-When in a prototype, the this() function can be used to refer to the
-current prototype instance:
+5. AUTOLOADING
+---------------
+In the above example, $myProto->foo existed when $myProto->echofoo() was
+called because of the autoloading. The autoloader, enabled by default, will
+call the parents of a closure to make sure that it is properly defined.
 
-<?php
-$myPrototype = proto(function(){
-    this()->foo = "bar";
-});
-?>
+Per example, with the autoloader disabled:
 
-The above will set the "foo" variable in the $myPrototype prototype
-object.
+    <?php
+    $myProto = proto(function(){
+        this()->foo = 'bar';
+        this()->echofoo = function(){
+            echo parent()->foo;
+        };
+    });
+    PHPProto::$autoload = false;
+    $myProto->echofoo(); // echofoo is not defined
+    
+    $myProto();
+    $myProto->echofoo(); // echofoo is defined now
+    ?>
 
-                              NESTING
-                              
-Once you have a base prototype object, you can easily nest lambda within,
-without having to use any type of syntax other than PHP's.
+Obviously, if your base closure requires arguments, you will have to call
+it manually, but you don't have to disable the autoloader, as long as you
+call the base first:
 
-<?php
-$myPrototype = proto(function(){
-    this()->hello = function(){
-        echo 'Hello world!';
+    <?php
+    $myProto = proto(function($foo){
+        this()->foo = $foo;
+    });
+    $myProto('bar');
+    echo $myProto->foo;
+    ?>
+
+
+
+6. CLONING
+-----------
+Cloning can be useful for creating a base prototype and using it multiple
+times:
+
+    <?php
+    $myProto = proto(function($foo){
+        this()->foo = $foo;
+    });
+    
+    $proto1 = clone $myProto('bar');
+    $proto2 = clone $myProto('baz');
+    echo $proto1->foo; // bar
+    echo $proto2->foo; // baz
+    ?>
+
+
+
+7. PROTOTYPING
+---------------
+You can have the prototype inherit one or multiple prototypes using the
+__proto__() method (in the OO interface) or the proto() function (in the
+procedural interface):
+
+    <?php
+    $protoA = proto(function(){
+        this()->foo = 'bar';
+    });
+    $protoB = proto(function() use($protoA){
+        this()->__proto__($protoA);
+        proto($protoA); // same as above
+        
+        echo this()->foo; // prints bar
+    });
+    ?>
+
+The deeper variables will shadow the inherited ones.
+
+    <?php
+    $protoA = proto(function(){
+        this()->foo = 'bar';
+    });
+    $protoB = proto(function() use($protoA){
+        proto($protoA);
+        this()->foo = 'baz';
+    });
+    echo $protoB->foo; // prints baz
+    ?>
+
+Inheritance, by default, will make a deep copy of the inherited prototype.
+
+    <?php
+    $protoA = proto(function(){
+        this()->foo = 'bar';
+    });
+    $protoB = proto(function() use($protoA){
+        proto($protoA);
+        this()->foo = 'baz';
+    });
+    echo $protoB->foo; // prints baz
+    echo $protoA->foo; // prints bar
+    ?>
+
+This can be disabled, by the use of the $shared argument in the __proto__()
+method (OO interface only):
+
+    <?php
+    $protoA = proto(function(){
+        this()->foo = 'bar';
+    });
+    $protoB = proto(function() use($protoA){
+        proto($protoA, true); // do not copy $protoA
+        this()->foo = 'baz';
+    });
+    echo $protoA->foo; // prints baz
+    ?>
+
+Multiple inheritance is also possible:
+
+    <?php
+    $protoA = proto(function(){
+        this()->foo = 'bar';
+    });
+    $protoB = proto(function(){
+        this()->hello = 'world';
+    });
+    $protoC = proto(function() use($protoA, $protoB){
+        proto($protoA);
+        proto($protoB);
+        echo this()->foo;   // prints bar
+        echo this()->hello; // prints world
+    });
+    ?>
+
+
+
+8. TYPING
+----------
+You can set types for objects by using the __type__() method (in the OO
+interface) or the $type argument (in the procedural interface):
+
+    <?php
+    $myProto = new PHPProto(function(){});
+    $myProto->__type__('hello');
+    
+    $myProto = proto(function(){}, 'hello'); // same as above
+    ?>
+
+Once the prototype has a defined type, you can retrieve it or check it:
+
+    <?php
+    // OO interface
+    $myProto = proto(function(){}, 'hello');
+    var_dump($myProto->__oftype__('hello')); // true
+    var_dump($myProto->__oftype__('world')); // false
+    var_dump($myProto->__typeof__());        // array('hello');
+    
+    // Procedural interface
+    $myProto = proto(function(){}, 'hello');
+    var_dump(oftype('hello', $myProto));     // true
+    var_dump(oftype('world', $myProto));     // false
+    var_dump(typeof($myProto));              // array('hello')
+    ?>
+
+Of course, a prototype can have multiple types:
+
+    <?php
+    $protoA = proto(function(){}, 'A');
+    $protoB = proto(function(){}, 'B');
+    $protoC = proto(function() use($protoA, $protoB){
+        proto($protoA);
+        proto($protoB);
+    }, 'C');
+    
+    var_dump(oftype('A', $protoC)); // true
+    var_dump(oftype('B', $protoC)); // true
+    var_dump(oftype('C', $protoC)); // true
+    var_dump(typeof($protoC));      // array('A', 'B', 'C')
+    ?>
+
+
+
+9. DYNAMIC MODIFICATION
+------------------------
+You can dynamically modify a prototype functions:
+
+    <?php
+    $myProto = proto(function(){
+        this()->printmsg = function(){
+             echo 'Hello World!';
+        };
+    });
+    $myProto->printmsg(); // prints Hello World!
+    
+    $myProto->printmsg = function(){
+        echo 'Foobar!';
     };
-});
-?>
-
-                              PARENT()
-                              
-From a nested prototype function, you can also access the parent object:
-
-<?php
-$myPrototype = proto(function(){
-    this()->foo = "bar";
-    this()->hello = function(){
-        echo this()->parent()->foo;     // prints "bar"
-    };
-});
-?>
-
-                       CALLING THE PROTOTYPE
-                       
-With the following example:
-
-<?php
-$myPrototype = proto(function(){
-    this()->foo = "bar";
-    this()->hello = function(){
-        echo this()->parent()->foo;     // prints "bar"
-    };
-});
-?>
-
-We can now call it:
-
-<?php
-$myPrototype();             // set $myPrototype->foo to "bar"
-$myPrototype->hello();      // prints "bar"
-?>
-
-                             AUTOLOAD
-                             
-Since your functions are declared within functions, you normally need to call the
-parent function in order to declare its children (like in the above example). With
-the autoloader, enabled by default, this is not necessary:
-
-<?php
-$myPrototype->hello()      // actually executes $myPrototype(), and then 
-                           // $myPrototype->hello()
-?>
-
-The autoloader can also be disabled:
-
-<?php
-PHPProto::$autoload = false;
-$myPrototype->hello();     // returns null, hello() is not defined
-?>
+    $myProto->printmsg(); // prints Foobar!
+    ?>
 
 
-                                LICENSE
-
-       This library is published under the GNU LGPLv3 license:
-
-                   GNU LESSER GENERAL PUBLIC LICENSE
-                       Version 3, 29 June 2007
-
- Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/>
- Everyone is permitted to copy and distribute verbatim copies
- of this license document, but changing it is not allowed.
-
-
-  This version of the GNU Lesser General Public License incorporates
-the terms and conditions of version 3 of the GNU General Public
-License, supplemented by the additional permissions listed below.
-
-  0. Additional Definitions.
-
-  As used herein, "this License" refers to version 3 of the GNU Lesser
-General Public License, and the "GNU GPL" refers to version 3 of the GNU
-General Public License.
-
-  "The Library" refers to a covered work governed by this License,
-other than an Application or a Combined Work as defined below.
-
-  An "Application" is any work that makes use of an interface provided
-by the Library, but which is not otherwise based on the Library.
-Defining a subclass of a class defined by the Library is deemed a mode
-of using an interface provided by the Library.
-
-  A "Combined Work" is a work produced by combining or linking an
-Application with the Library.  The particular version of the Library
-with which the Combined Work was made is also called the "Linked
-Version".
-
-  The "Minimal Corresponding Source" for a Combined Work means the
-Corresponding Source for the Combined Work, excluding any source code
-for portions of the Combined Work that, considered in isolation, are
-based on the Application, and not on the Linked Version.
-
-  The "Corresponding Application Code" for a Combined Work means the
-object code and/or source code for the Application, including any data
-and utility programs needed for reproducing the Combined Work from the
-Application, but excluding the System Libraries of the Combined Work.
-
-  1. Exception to Section 3 of the GNU GPL.
-
-  You may convey a covered work under sections 3 and 4 of this License
-without being bound by section 3 of the GNU GPL.
-
-  2. Conveying Modified Versions.
-
-  If you modify a copy of the Library, and, in your modifications, a
-facility refers to a function or data to be supplied by an Application
-that uses the facility (other than as an argument passed when the
-facility is invoked), then you may convey a copy of the modified
-version:
-
-   a) under this License, provided that you make a good faith effort to
-   ensure that, in the event an Application does not supply the
-   function or data, the facility still operates, and performs
-   whatever part of its purpose remains meaningful, or
-
-   b) under the GNU GPL, with none of the additional permissions of
-   this License applicable to that copy.
-
-  3. Object Code Incorporating Material from Library Header Files.
-
-  The object code form of an Application may incorporate material from
-a header file that is part of the Library.  You may convey such object
-code under terms of your choice, provided that, if the incorporated
-material is not limited to numerical parameters, data structure
-layouts and accessors, or small macros, inline functions and templates
-(ten or fewer lines in length), you do both of the following:
-
-   a) Give prominent notice with each copy of the object code that the
-   Library is used in it and that the Library and its use are
-   covered by this License.
-
-   b) Accompany the object code with a copy of the GNU GPL and this license
-   document.
-
-  4. Combined Works.
-
-  You may convey a Combined Work under terms of your choice that,
-taken together, effectively do not restrict modification of the
-portions of the Library contained in the Combined Work and reverse
-engineering for debugging such modifications, if you also do each of
-the following:
-
-   a) Give prominent notice with each copy of the Combined Work that
-   the Library is used in it and that the Library and its use are
-   covered by this License.
-
-   b) Accompany the Combined Work with a copy of the GNU GPL and this license
-   document.
-
-   c) For a Combined Work that displays copyright notices during
-   execution, include the copyright notice for the Library among
-   these notices, as well as a reference directing the user to the
-   copies of the GNU GPL and this license document.
-
-   d) Do one of the following:
-
-       0) Convey the Minimal Corresponding Source under the terms of this
-       License, and the Corresponding Application Code in a form
-       suitable for, and under terms that permit, the user to
-       recombine or relink the Application with a modified version of
-       the Linked Version to produce a modified Combined Work, in the
-       manner specified by section 6 of the GNU GPL for conveying
-       Corresponding Source.
-
-       1) Use a suitable shared library mechanism for linking with the
-       Library.  A suitable mechanism is one that (a) uses at run time
-       a copy of the Library already present on the user's computer
-       system, and (b) will operate properly with a modified version
-       of the Library that is interface-compatible with the Linked
-       Version.
-
-   e) Provide Installation Information, but only if you would otherwise
-   be required to provide such information under section 6 of the
-   GNU GPL, and only to the extent that such information is
-   necessary to install and execute a modified version of the
-   Combined Work produced by recombining or relinking the
-   Application with a modified version of the Linked Version. (If
-   you use option 4d0, the Installation Information must accompany
-   the Minimal Corresponding Source and Corresponding Application
-   Code. If you use option 4d1, you must provide the Installation
-   Information in the manner specified by section 6 of the GNU GPL
-   for conveying Corresponding Source.)
-
-  5. Combined Libraries.
-
-  You may place library facilities that are a work based on the
-Library side by side in a single library together with other library
-facilities that are not Applications and are not covered by this
-License, and convey such a combined library under terms of your
-choice, if you do both of the following:
-
-   a) Accompany the combined library with a copy of the same work based
-   on the Library, uncombined with any other library facilities,
-   conveyed under the terms of this License.
-
-   b) Give prominent notice with the combined library that part of it
-   is a work based on the Library, and explaining where to find the
-   accompanying uncombined form of the same work.
-
-  6. Revised Versions of the GNU Lesser General Public License.
-
-  The Free Software Foundation may publish revised and/or new versions
-of the GNU Lesser General Public License from time to time. Such new
-versions will be similar in spirit to the present version, but may
-differ in detail to address new problems or concerns.
-
-  Each version is given a distinguishing version number. If the
-Library as you received it specifies that a certain numbered version
-of the GNU Lesser General Public License "or any later version"
-applies to it, you have the option of following the terms and
-conditions either of that published version or of any later version
-published by the Free Software Foundation. If the Library as you
-received it does not specify a version number of the GNU Lesser
-General Public License, you may choose any version of the GNU Lesser
-General Public License ever published by the Free Software Foundation.
-
-  If the Library as you received it specifies that a proxy can decide
-whether future versions of the GNU Lesser General Public License shall
-apply, that proxy's public statement of acceptance of any version is
-permanent authorization for you to choose that version for the
-Library.
+    
+10. SAMPLE
+-----------
+Checkout the example.php file for a working example.

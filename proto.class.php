@@ -15,7 +15,6 @@
  * This class provides an interface for prototype-based programming. Refer to the README
  * file to know how to use it.
  * 
- * @todo Implement some interfaces
  * @category        Core
  * @version         1.0
  */
