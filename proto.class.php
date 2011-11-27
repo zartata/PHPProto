@@ -31,14 +31,7 @@ class PHPProto {
      * Current prototypes stack.
      * @var PHPProto[]
      */
-    static protected $current = array();
-    
-    /**
-     * Current super objects stack.
-     * 
-     * @var unknown_type
-     */
-    static protected $super = array();
+    static protected $_current = array();
     
     /**
      * Variables stack.
@@ -82,7 +75,7 @@ class PHPProto {
      * @return PHPProto Prototype object.
      */
     static public function this() {
-        $obj = end(static::$current);
+        $obj = end(static::$_current);
         return $obj ?: null;
     }
 
@@ -111,7 +104,7 @@ class PHPProto {
      * @return void
      */
     public function __construct(Closure $main = null, PHPProto $parent = null) {
-        $this->_parent = isset($parent) ? $parent : this();
+        $this->_parent = isset($parent) ? $parent : static::this();
         $this->_main = $main;
     }
     
@@ -210,9 +203,7 @@ class PHPProto {
     public function __call($name, $args) {
         $owner = $this->_get_symbol_owner($name);
         if ($owner !== $this) {
-            static::$super[] = $this;
             $return = call_user_func_array(array($owner, $name), $args);
-            array_pop(static::$super);
             return $return;
         }
         
@@ -233,12 +224,12 @@ class PHPProto {
      */
     public function __invoke() {
         $this->_loaded = true;
-        static::$current[] = $this;
+        static::$_current[] = $this;
         
         if (!isset($this->_main)) return;
         
         $return = call_user_func_array($this->_main, func_get_args());
-        array_pop(static::$current);
+        array_pop(static::$_current);
         return $return;
     }
     
