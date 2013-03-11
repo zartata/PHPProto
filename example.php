@@ -2,10 +2,9 @@
 /**
  * php-proto : Prototype programming interface.
  *
- * @author          Francis Lacroix <f@quotient.ca>
- * @package         php-proto
+ * @author          Francis Lacroix <flacroix897 at gmail.com>
+ * @package         PHPProto
  * @version         1.0
- * @copyright       All rights reserved (c) Override Logic Technologies 2011-
  * @license         http://www.gnu.org/licenses/lgpl-3.0.txt
  */
 
